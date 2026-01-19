@@ -12,7 +12,7 @@ This repository contains MongoDB shell commands for the following tasks:
 6. Deleting a document
 
 ## Files Included
-- `LAB ASSIGNMENT 1` – MongoDB shell commands for all questions
+- `LAB ASSIGNMENT 1,2` – MongoDB shell commands for all questions
 
 ## Tools Used
 - MongoDB
