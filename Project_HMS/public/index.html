@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Management System</title>
+</head>
+<body>
+
+    <h1>Hospital Management System</h1>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Patients</h2>
+            <a href="/patients">View Patients</a>
+        </div>
+
+
+    <div class="card">
+        <h2>Doctors</h2>
+        <a href="/doctors">View Doctors</a>
+    </div>
+
+    <div class="card">
+        <h2>Appointments</h2>
+        <a href="/appointments">View Appointments</a>   
+    </div>
+
+    <div class="card">
+        <h2>Add Doctors</h2>
+        <input type="text" placeholder="Doctor Name">
+        <input type="text" placeholder="Specialization">
+        <input type="text" placeholder="Doctor ID">
+        <button type="submit" onclick="addDoctor()">Add Doctor</button>
+        <a href="/doctors">Add New Doctor</a>
+    </div>
+
+
+</div>
+
+</body>
+
+<script>
+    function addDoctor() {
+        const name = document.querySelector('input[placeholder="Doctor Name"]').value;
+        const specialization = document.querySelector('input[placeholder="Specialization"]').value;
+        const doctor_id = document.querySelector('input[placeholder="Doctor ID"]').value;
+
+        fetch('/doctors', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name: name, specialization: specialization, doctor_id: doctor_id })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert('Doctor added successfully!');
+            window.location.href = '/doctors';
+        })
+        .catch(error => {
+            console.error('Error adding doctor:', error);
+            alert('Failed to add doctor. Please try again.');
+        });
+    }
+
+</script>
+</html>
