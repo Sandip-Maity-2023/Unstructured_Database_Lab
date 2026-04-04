@@ -28,6 +28,21 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.use('/api', async (req, res, next) => {
+  if (req.path === '/health' || isDatabaseReady()) {
+    return next();
+  }
+
+  try {
+    await connectDatabase();
+    return next();
+  } catch (error) {
+    return res.status(503).json({
+      error: 'Database not connected. Set MONGO_URI in Vercel and make sure the cluster is reachable.'
+    });
+  }
+});
+
 const MedicalHistorySchema = new mongoose.Schema({
   condition: { type: String, required: true },
   diagnosis_date: { type: Date },
@@ -505,21 +520,6 @@ async function connectDatabase() {
     }
   }
 }
-
-app.use('/api', async (req, res, next) => {
-  if (req.path === '/health' || isDatabaseReady()) {
-    return next();
-  }
-
-  try {
-    await connectDatabase();
-    return next();
-  } catch (error) {
-    return res.status(503).json({
-      error: 'Database not connected. Set MONGO_URI in Vercel and make sure the cluster is reachable.'
-    });
-  }
-});
 
 if (require.main === module) {
   app.listen(PORT, async () => {
