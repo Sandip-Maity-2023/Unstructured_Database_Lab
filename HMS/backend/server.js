@@ -7,6 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/medcore_hms';
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
+let databaseConnectionPromise = null;
 
 app.use(cors());
 app.use(express.json());
@@ -24,16 +25,6 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     database: isDatabaseReady() ? 'connected' : 'disconnected'
-  });
-});
-
-app.use('/api', (req, res, next) => {
-  if (isDatabaseReady() || req.path === '/health') {
-    return next();
-  }
-
-  return res.status(503).json({
-    error: 'Database not connected. Start MongoDB and restart the backend.'
   });
 });
 
@@ -489,19 +480,56 @@ async function seedData() {
 }
 
 async function connectDatabase() {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (databaseConnectionPromise) {
+    return databaseConnectionPromise;
+  }
+
   try {
-    await mongoose.connect(MONGO_URI, {
+    databaseConnectionPromise = mongoose.connect(MONGO_URI, {
       serverSelectionTimeoutMS: 5000
     });
+    await databaseConnectionPromise;
     console.log(`MongoDB connected: ${MONGO_URI}`);
     await seedData();
+    return mongoose.connection;
   } catch (error) {
     console.error('MongoDB connection failed:', error.message);
+    throw error;
+  } finally {
+    if (mongoose.connection.readyState !== 1) {
+      databaseConnectionPromise = null;
+    }
   }
 }
 
-app.listen(PORT, () => {
-  console.log(`MedCore HMS backend running at http://localhost:${PORT}`);
+app.use('/api', async (req, res, next) => {
+  if (req.path === '/health' || isDatabaseReady()) {
+    return next();
+  }
+
+  try {
+    await connectDatabase();
+    return next();
+  } catch (error) {
+    return res.status(503).json({
+      error: 'Database not connected. Set MONGO_URI in Vercel and make sure the cluster is reachable.'
+    });
+  }
 });
 
-connectDatabase();
+if (require.main === module) {
+  app.listen(PORT, async () => {
+    console.log(`MedCore HMS backend running at http://localhost:${PORT}`);
+    try {
+      await connectDatabase();
+    } catch (error) {
+      console.error('Startup database connection failed:', error.message);
+    }
+  });
+}
+
+module.exports = app;
