@@ -1,11 +1,16 @@
+const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
+const ENV_PATH = path.join(__dirname, '.env');
+loadEnvFile(ENV_PATH);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/medcore_hms';
+const MONGO_URI = (process.env.MONGO_URI || '').trim();
+const MONGO_DB_NAME = (process.env.MONGO_DB_NAME || 'medcore_hms').trim();
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
 let databaseConnectionPromise = null;
 
@@ -15,6 +20,45 @@ app.use(express.static(FRONTEND_DIR));
 
 function isDatabaseReady() {
   return mongoose.connection.readyState === 1;
+}
+
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return;
+  }
+
+  const envFile = fs.readFileSync(filePath, 'utf8');
+  for (const rawLine of envFile.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) {
+      continue;
+    }
+
+    const separatorIndex = line.indexOf('=');
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const key = line.slice(0, separatorIndex).trim();
+    const value = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '');
+    if (key && !Object.prototype.hasOwnProperty.call(process.env, key)) {
+      process.env[key] = value;
+    }
+  }
+}
+
+function ensureMongoUri() {
+  if (!MONGO_URI) {
+    throw new Error(`Missing MONGO_URI. Add it to ${ENV_PATH} or your deployment environment.`);
+  }
+
+  if (!/^mongodb(\+srv)?:\/\//.test(MONGO_URI)) {
+    throw new Error('Invalid MONGO_URI. It must start with mongodb:// or mongodb+srv://');
+  }
+}
+
+function maskMongoUri(uri) {
+  return uri.replace(/\/\/([^:/?#]+):([^@]+)@/, '//$1:****@');
 }
 
 app.get('/', (req, res) => {
@@ -495,6 +539,8 @@ async function seedData() {
 }
 
 async function connectDatabase() {
+  ensureMongoUri();
+
   if (mongoose.connection.readyState === 1) {
     return mongoose.connection;
   }
@@ -505,10 +551,11 @@ async function connectDatabase() {
 
   try {
     databaseConnectionPromise = mongoose.connect(MONGO_URI, {
+      dbName: MONGO_DB_NAME,
       serverSelectionTimeoutMS: 5000
     });
     await databaseConnectionPromise;
-    console.log(`MongoDB connected: ${MONGO_URI}`);
+    console.log(`MongoDB connected: ${maskMongoUri(MONGO_URI)}`);
     await seedData();
     return mongoose.connection;
   } catch (error) {
