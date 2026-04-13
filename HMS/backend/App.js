@@ -75,7 +75,7 @@ async function apiFetch(path, opts = {}) {
 
 // ============================================================
 //  DASHBOARD
-// ============================================================
+
 async function loadDashboard() {
   const [patients, doctors, appointments, analytics] = await Promise.all([
     apiFetch('/patients'),
@@ -127,7 +127,7 @@ async function loadDashboard() {
 
 // ============================================================
 //  PATIENTS
-// ============================================================
+
 let allPatients = [];
 
 async function loadPatients() {
@@ -291,7 +291,7 @@ async function deleteDoctor(id) {
 
 // ============================================================
 //  APPOINTMENTS
-// ============================================================
+
 async function loadAppointments() {
   const status = document.getElementById('appt-filter-status').value;
   const url = status ? `/appointments?status=${status}` : '/appointments';
@@ -361,7 +361,7 @@ async function deleteAppointment(id) {
 
 // ============================================================
 //  ANALYTICS
-// ============================================================
+
 async function loadAnalytics() {
   const [perDoctor, topDoctor, indexes] = await Promise.all([
     apiFetch('/analytics/patients-per-doctor'),
